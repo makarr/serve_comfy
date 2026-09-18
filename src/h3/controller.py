@@ -1,5 +1,6 @@
 import uuid
 
+import httpx
 from litestar import Controller, get, post, Response
 from litestar.background_tasks import BackgroundTask
 from litestar.exceptions.http_exceptions import NotFoundException
