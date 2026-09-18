@@ -2,12 +2,12 @@ from litestar.connection import ASGIConnection
 from litestar.handlers.base import BaseRouteHandler
 from litestar.exceptions import NotAuthorizedException
 
-from config.constants import API_KEY
+from src.config.constants import API_KEY
 
 async def api_key_guard(
     connection: ASGIConnection,
     _: BaseRouteHandler
-    ) -> None:    
+) -> None:
     try:
         api_key = connection.headers.get(
             "Authorization"

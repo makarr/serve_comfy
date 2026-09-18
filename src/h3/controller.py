@@ -5,12 +5,13 @@ from litestar import Controller, get, post, Response
 from litestar.background_tasks import BackgroundTask
 from litestar.exceptions.http_exceptions import NotFoundException
 
+from src.common.guards import api_key_guard
 from src.config.constants import COMFY_URL
 from .models import Text2VideoRequest, VideoResponse, VideoStatus
 from .service import handle_t2v, get_status, load_mp4_bytes
 
 class H3Controller(Controller):
-    guards = []
+    guards = [api_key_guard]
     client = httpx.Client(base_url=COMFY_URL)
 
     @get("/status/{request_id:uuid}")
