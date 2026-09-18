@@ -3,7 +3,6 @@ from typing import Any
 
 import httpx
 
-from src.config.constants import COMFY_URL
 from .database import insert_error, insert_prompt_id, select_status
 from .models import Text2VideoRequest, VideoStatus
 

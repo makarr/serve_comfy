@@ -5,6 +5,7 @@ from litestar import Controller, get, post, Response
 from litestar.background_tasks import BackgroundTask
 from litestar.exceptions.http_exceptions import NotFoundException
 
+from src.config.constants import COMFY_URL
 from .models import Text2VideoRequest, VideoResponse, VideoStatus
 from .service import handle_t2v, get_status
 
