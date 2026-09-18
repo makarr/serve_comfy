@@ -42,7 +42,7 @@ def handle_t2v(
     )
     
     if r.is_success:
-        prompt_id = r.json()["prompt_id"]
+        prompt_id = r.json()['prompt_id']
         insert_prompt_id(request_id, prompt_id)    
     else:
         insert_error(request_id, r.text)
@@ -107,9 +107,8 @@ def get_status(
 
 
 def data_to_workflow(data: Text2VideoRequest) -> dict[str, Any]:
-    width = 960
-    height = 544
-    length = 243
+    width, height = get_width_height(data.aspect_ratio)
+    length = seconds_to_frames(data.num_seconds)
     return singularity_workflow(
         data.prompt,
         width,
@@ -271,4 +270,30 @@ def singularity_workflow(
                 "codec": "h264",
             },
         },
-    } 
+    }
+
+
+def seconds_to_frames(s: float) -> int:
+    for k in range(7, 22):
+        length = 17 * k + 5
+        duration = length / 24
+        if duration > s:
+            return length
+    return length
+
+
+def get_width_height(
+    aspect_ratio: str, 
+    resolution: str = "768p"
+) -> tuple[int, int]:
+    return {
+        "21:9": (1344, 576),
+        "2:1": (1344, 672),
+        "16:9": (1344, 768),
+        "3:2": (1152, 768),
+        "4:3": (1024, 768),
+        "1:1": (992, 992),
+        "3:4": (768, 1024),
+        "2:3": (768, 1152),
+        "9:16": (768, 1344)
+    }[aspect_ratio]

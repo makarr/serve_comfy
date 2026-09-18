@@ -10,6 +10,16 @@ from src.config.constants import COMFY_URL
 from .models import Text2VideoRequest, VideoResponse, VideoStatus
 from .service import handle_t2v, get_status, load_mp4_bytes
 
+@get("/result/{url_name:str}", media_type='video/mp4')
+    async def serve_video(self, url_name: str) -> bytes:
+        mp4_bytes = load_mp4_bytes(url_name)
+        # case: not found
+        if mp4_bytes is None:
+            raise NotFoundException
+        # case: found but can't load (0 bytes)
+        # case: found and loaded successfully
+        return mp4_bytes
+
 class H3Controller(Controller):
     guards = [api_key_guard]
     client = httpx.Client(base_url=COMFY_URL)
@@ -20,15 +30,6 @@ class H3Controller(Controller):
             return status
         raise NotFoundException
 
-    @get("/result/{url_name:str}", media_type='video/mp4')
-    async def serve_video(self, url_name: str) -> bytes:
-        mp4_bytes = load_mp4_bytes(url_name)
-        # case: not found
-        if mp4_bytes is None:
-            raise NotFoundException
-        # case: found but can't load (0 bytes)
-        # case: found and loaded successfully
-        return mp4_bytes
     
     @post("/text2video")
     async def text2video(self, data: Text2VideoRequest) -> Response[VideoResponse]:
