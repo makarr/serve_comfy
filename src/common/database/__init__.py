@@ -6,7 +6,9 @@ register_adapters()
 init_script = """
 CREATE TABLE IF NOT EXISTS requests (
     request_id  UUID UNIQUE NOT NULL,
-    status      TEXT
+    status      TEXT,
+    error_msg   TEXT,
+    prompt_id   TEXT
 );
 """
 

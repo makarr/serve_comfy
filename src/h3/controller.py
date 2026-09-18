@@ -9,6 +9,7 @@ from .service import handle_t2v, get_status
 
 class H3Controller(Controller):
     guards = []
+    client = httpx.Client(base_url=COMFY_URL)
 
     @get("/status/{request_id:uuid}")
     async def check_status(self, request_id: uuid.UUID) -> VideoStatus:
@@ -23,7 +24,8 @@ class H3Controller(Controller):
             VideoResponse(request_id),
             background=BackgroundTask(
                 handle_t2v,
+                self.client,
                 request_id,
-                data.prompt
+                data
             )
         )
