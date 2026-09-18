@@ -1,10 +1,33 @@
-import uuid
+import uuid, secrets
 from typing import Any
+from pathlib import Path
 
 import httpx
 
-from .database import insert_error, insert_prompt_id, select_status
+from src.config.constants import EXTERNAL_URL, VIDEO_DIR
 from .models import Text2VideoRequest, VideoStatus
+from .database import (
+    insert_error, 
+    update_error,
+    update_success,
+    insert_prompt_id, 
+    select_request,
+    select_filename
+)
+
+def load_mp4_bytes(url_name: str) -> bytes | None:
+    if not url_name.endswith('.mp4'):
+        return None     
+    url_name = url_name.split('.')[0]
+    if not (filename := select_filename(url_name)):
+        return None
+
+    filepath = Path(f"{VIDEO_DIR}/{filename}")
+    if not filepath.exists():
+        return b''
+
+    with open(filepath, 'rb') as f:
+        return f.read()
 
 
 def handle_t2v(
@@ -25,9 +48,62 @@ def handle_t2v(
         insert_error(request_id, r.text)
 
 
-def get_status(request_id: uuid.UUID) -> VideoStatus | None:
-    if status := select_status(request_id):
-        return VideoStatus(request_id, status)
+def get_status(
+    client: httpx.Client,
+    request_id: uuid.UUID
+) -> VideoStatus | None:
+    
+    if not (row := select_request(request_id)):
+        return None
+    
+    status = row['status']    
+    if status == 'error':
+        return VideoStatus(
+            request_id,
+            status,
+            error_msg=row['error_msg']
+        )
+    elif status == 'success':
+        return VideoStatus(
+            request_id,
+            status,
+            video_url=f"{EXTERNAL_URL}/result/{row['url_name']}.mp4"
+        )
+    elif status == 'processing':
+        prompt_id = row['prompt_id']
+        r = client.get(f"/history/{prompt_id}")
+        r.raise_for_status()
+        
+        # comfy queue
+        if not (record := r.json().get(prompt_id, None)):
+            return VideoStatus(request_id, status)
+
+        status = record['status']
+        status_str = status['status_str']
+        
+        # comfy processing
+        if not status['completed']:
+            return VideoStatus(request_id, status)
+        
+        # error during generation
+        if status_str != 'success':
+            error_msg = "Error during generation"
+            update_error(request_id, error_msg)
+            return VideoStatus(
+                request_id,
+                status="error",
+                error_msg=error_msg
+            )
+
+        # successful generation
+        filename = next(iter(record['outputs'].values()))['images'][0]['filename']
+        url_name = secrets.token_urlsafe(12)
+        update_success(request_id, filename, url_name)
+        return VideoStatus(
+            request_id,
+            "success",
+            video_url=f"{EXTERNAL_URL}/result/{url_name}.mp4"
+        )       
 
 
 def data_to_workflow(data: Text2VideoRequest) -> dict[str, Any]:
@@ -190,7 +266,7 @@ def singularity_workflow(
             "class_type": "SaveVideo",
             "inputs": {
                 "video": ["15", 0],
-                "filename_prefix": "video/",
+                "filename_prefix": "video/_",
                 "format": "mp4",
                 "codec": "h264",
             },

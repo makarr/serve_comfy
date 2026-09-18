@@ -8,7 +8,9 @@ CREATE TABLE IF NOT EXISTS requests (
     request_id  UUID UNIQUE NOT NULL,
     status      TEXT,
     error_msg   TEXT,
-    prompt_id   TEXT
+    prompt_id   TEXT,
+    filename    TEXT,
+    url_name    TEXT
 );
 """
 
